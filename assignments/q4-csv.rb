@@ -14,13 +14,40 @@ module ActsAsCsv
     def initialize(rows)
       first, *rest = rows
       @headers = first.split(', ')
-      @csv_contents = rest.map { |row| row.split(', ') }
+      @csv_contents = rest.map { |row|
+        row_arr = row.split(', ')
+        row_hash = row_arr.each.with_index.inject({}) { |memo, (value, i)|
+          memo[@headers[i]] = value
+          memo
+        }
+        CsvRow.new(row_hash)
+      }
     end
+  end
+end
+
+class CsvRow
+  attr_accessor :values
+  def initialize(values)
+    @values = values
+  end
+  def method_missing method, *args
+    @values[method.to_s]
   end
 end
 
 class RubyCsv
   include ActsAsCsv
   acts_as_csv
+  
+  def each(&block)
+    @csv_contents.each {|row| block.call row}
+  end
 end
 
+lines = [
+  'one, two',
+  'lions, tigers'
+]
+csv = RubyCsv.new(lines)
+csv.each {|row| puts row.one}
